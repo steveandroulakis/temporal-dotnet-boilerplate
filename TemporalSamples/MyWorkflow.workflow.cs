@@ -7,10 +7,11 @@ using Temporalio.Workflows;
 [Workflow]
 public class MyWorkflow
 {
+    private List<List<int>> currentResults = new List<List<int>>();
+
     [WorkflowRun]
     public async Task<List<int>[]> RunAsync(Order order)
     {
-        List<List<int>> resultList = new List<List<int>>();
 
         // Run an async instance method activity.
         var result1 = await Workflow.ExecuteActivityAsync(
@@ -59,7 +60,7 @@ public class MyWorkflow
                     {
                         Console.WriteLine("result is...");
                         Console.WriteLine(string.Join(", ", t.Result));  // print the result
-                        resultList.Add(t.Result);
+                        currentResults.Add(t.Result);
                         return t.Result;
                     });
 
@@ -78,5 +79,20 @@ public class MyWorkflow
         // return result2;
         return childResults;
     }
+
+    [WorkflowQuery]
+    public string CurrentResults()
+    {
+        List<string> resultStrings = new List<string>();
+
+        foreach (var innerList in currentResults)
+        {
+            string innerListString = "[" + String.Join(", ", innerList) + "]";
+            resultStrings.Add(innerListString);
+        }
+
+        return "[" + String.Join(", ", resultStrings) + "]";
+    }
+
 
 }
