@@ -9,7 +9,7 @@ using Temporalio.Workflows;
 public class MyWorkflow
 {
     private List<List<int>> currentResults = new List<List<int>>();
-    private bool complete = false;
+    private bool halted = false;
 
     [WorkflowRun]
     public async Task<List<int>[]> RunAsync(Order order)
@@ -72,18 +72,18 @@ public class MyWorkflow
 
         // Wait for all workflows to complete and gather their results
         var childResultsTask = Task.WhenAll(workflowHandles);
-        var waitComplete = Workflow.WaitConditionAsync(() => this.complete);
+        var waitHalted = Workflow.WaitConditionAsync(() => this.halted);
 
-        var completedTask = await Task.WhenAny(childResultsTask, waitComplete);
+        var finishedWorkflow = await Task.WhenAny(childResultsTask, waitHalted);
 
-        if (completedTask == childResultsTask)
+        if (finishedWorkflow == childResultsTask)
         {
             Console.WriteLine("Workflow completed");
             var childResults = childResultsTask.Result;
             return childResults;
         }
         else {
-            Console.WriteLine("Workflow exiting due to signal");
+            Console.WriteLine("Workflow exiting due to halt signal");
             throw new ApplicationFailureException("Exited due to signal");
         }
     }
@@ -103,8 +103,8 @@ public class MyWorkflow
     }
 
     [WorkflowSignal]
-    public async Task CompleteSignal() {
-        Console.WriteLine("got signal");
-        this.complete = true;
+    public async Task HaltSignal() {
+        Console.WriteLine("got halt signal");
+        this.halted = true;
     }
 }
