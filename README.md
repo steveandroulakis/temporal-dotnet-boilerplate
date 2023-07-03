@@ -24,3 +24,9 @@ This will start a worker. To run against Temporal Cloud, `--target-host` may be 
 With that running, in a separate terminal execute the workflow from this directory:
 
     dotnet run execute-workflow --target-host $TEMPORAL_ADDRESS --namespace $TEMPORAL_NAMESPACE --client-cert $TEMPORAL_CERT_PATH --client-key $TEMPORAL_KEY_PATH
+
+Run web client ("/" will trigger a workflow execution)
+```
+cd AspNet
+dotnet run
+```
