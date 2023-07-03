@@ -45,7 +45,7 @@ app.MapGet("/", async (Task<TemporalClient> clientTask, string? name) =>
     var client = await clientTask;
     return await client.ExecuteWorkflowAsync(
         (MyWorkflow wf) => wf.RunAsync(),
-        new(id: $"aspnet-sample-workflow-{Guid.NewGuid()}", taskQueue: "activity-simple-sample"));
+        new(id: $"random-numbers-workflow-{Guid.NewGuid()}", taskQueue: "random-numbers-example"));
 });
 
 app.Run();

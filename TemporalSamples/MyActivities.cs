@@ -1,6 +1,7 @@
 namespace TemporalioSamples.ActivitySimple;
 
 using Temporalio.Activities;
+using System;
 
 public class MyActivities
 {
@@ -17,6 +18,14 @@ public class MyActivities
         // To make it work: dbClient.SelectValueAsync(table);
         // To break it: throw new CustomActivityException("This is a generic exception.");
         dbClient.SelectValueAsync(table);
+
+    [Activity]
+    public static int DoRandomThing()
+    {
+        Random rand = new Random();
+        return rand.Next(1, 8);
+    }
+
 
     public class MyDatabaseClient
     {
