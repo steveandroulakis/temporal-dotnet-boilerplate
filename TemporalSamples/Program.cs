@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.CommandLine.Invocation;
 using Microsoft.Extensions.Logging;
 using Temporalio.Client;
 using Temporalio.Worker;
@@ -95,6 +96,18 @@ AddClientCommand("execute-workflow", "Execute workflow", async (client, cancelTo
         new(id: "activity-simple-workflow-id", taskQueue: "activity-simple-sample"));
 
 });
+
+// Add a new standalone command named 'scratch'
+var scratchCommand = new Command("scratch", "Prints a test statement");
+
+scratchCommand.SetHandler(
+ () =>
+    {
+        Console.WriteLine("test");
+    }
+);
+
+rootCommand!.AddCommand(scratchCommand);
 
 // Run
 await rootCommand.InvokeAsync(args);

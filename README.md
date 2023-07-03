@@ -7,6 +7,7 @@ dotnet add package Microsoft.Extensions.Logging --version 7.0.0
 dotnet add package Microsoft.Extensions.Logging.Console --version 7.0.0
 dotnet add package Microsoft.VisualStudio.Threading.Analyzers --version 17.4.33
 dotnet add package System.CommandLine --prerelease
+dotnet add package Newtonsoft.Json
 ```
 
 ### Run
