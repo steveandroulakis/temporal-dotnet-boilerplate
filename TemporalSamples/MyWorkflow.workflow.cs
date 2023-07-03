@@ -2,12 +2,14 @@ namespace TemporalioSamples.ActivitySimple;
 
 using Microsoft.Extensions.Logging;
 using Temporalio.Api.History.V1;
+using Temporalio.Exceptions;
 using Temporalio.Workflows;
 
 [Workflow]
 public class MyWorkflow
 {
     private List<List<int>> currentResults = new List<List<int>>();
+    private bool complete = false;
 
     [WorkflowRun]
     public async Task<List<int>[]> RunAsync(Order order)
@@ -69,15 +71,21 @@ public class MyWorkflow
         }
 
         // Wait for all workflows to complete and gather their results
-        var childResults = await Task.WhenAll(workflowHandles);
+        var childResultsTask = Task.WhenAll(workflowHandles);
+        var waitComplete = Workflow.WaitConditionAsync(() => this.complete);
 
-        Workflow.Logger.LogInformation("Waiting 1 second just because", result2);
-        await Workflow.DelayAsync(1000);
-        Workflow.Logger.LogInformation("Finished Workflow!", result2);
+        var completedTask = await Task.WhenAny(childResultsTask, waitComplete);
 
-        // We'll go ahead and return this result
-        // return result2;
-        return childResults;
+        if (completedTask == childResultsTask)
+        {
+            Console.WriteLine("Workflow completed");
+            var childResults = childResultsTask.Result;
+            return childResults;
+        }
+        else {
+            Console.WriteLine("Workflow exiting due to signal");
+            throw new ApplicationFailureException("Exited due to signal");
+        }
     }
 
     [WorkflowQuery]
@@ -94,5 +102,9 @@ public class MyWorkflow
         return "[" + String.Join(", ", resultStrings) + "]";
     }
 
-
+    [WorkflowSignal]
+    public async Task CompleteSignal() {
+        Console.WriteLine("got signal");
+        this.complete = true;
+    }
 }

@@ -23,7 +23,7 @@ public class MyActivities
     public static int DoRandomThing()
     {
         Random rand = new Random();
-        return rand.Next(1, 8);
+        return rand.Next(3, 6);
     }
 
 

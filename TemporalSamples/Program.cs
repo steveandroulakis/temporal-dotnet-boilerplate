@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Temporalio.Client;
 using Temporalio.Worker;
 using TemporalioSamples.ActivitySimple;
+using Temporalio.Workflows;
+using Temporalio.Api.Enums.V1;
 
 var rootCommand = new RootCommand("Client mTLS sample");
 
@@ -11,7 +13,7 @@ var rootCommand = new RootCommand("Client mTLS sample");
 void AddClientCommand(
     string name,
     string desc,
-    Func<ITemporalClient, CancellationToken, Task> func)
+    Func<ITemporalClient, Option<string>, InvocationContext, CancellationToken, Task> func)
 {
     var cmd = new Command(name, desc);
     rootCommand!.AddCommand(cmd);
@@ -25,10 +27,13 @@ void AddClientCommand(
     clientCertOption.IsRequired = true;
     var clientKeyOption = new Option<FileInfo>("--client-key", "Client key file for auth");
     clientKeyOption.IsRequired = true;
+    var workflowIdOption = new Option<string>("--workflow-id", "Workflow Id to signal"); // Add this line
+    workflowIdOption.IsRequired = false; // Not required
     cmd.AddOption(targetHostOption);
     cmd.AddOption(namespaceOption);
     cmd.AddOption(clientCertOption);
     cmd.AddOption(clientKeyOption);
+    cmd.AddOption(workflowIdOption); // Add this line
 
     // Set handler
     cmd.SetHandler(async ctx =>
@@ -51,12 +56,12 @@ void AddClientCommand(
                 },
             });
         // Run
-        await func(client, ctx.GetCancellationToken());
+        await func(client, workflowIdOption, ctx, ctx.GetCancellationToken());
     });
 }
 
 // Command to run worker
-AddClientCommand("run-worker", "Run worker", async (client, cancelToken) =>
+AddClientCommand("run-worker", "Run worker", async (client, workflowIdOption, ctx, cancelToken) =>
 {
     // Cancellation token cancelled on ctrl+c
     using var tokenSource = new CancellationTokenSource();
@@ -90,13 +95,28 @@ AddClientCommand("run-worker", "Run worker", async (client, cancelToken) =>
 });
 
 // Command to run workflow
-AddClientCommand("execute-workflow", "Execute workflow", async (client, cancelToken) =>
+AddClientCommand("execute-workflow", "Execute workflow", async (client, workflowIdOption, ctx, cancelToken) =>
 {
+    var workflowId = $"random-numbers-workflow-{Guid.NewGuid()}";
     Console.WriteLine("Executing workflow");
+    Console.WriteLine(workflowId);
     var order = new Order("DataSamples/order.json");
     await client.ExecuteWorkflowAsync(
         (MyWorkflow wf) => wf.RunAsync(order),
-        new(id: $"random-numbers-workflow-{Guid.NewGuid()}", taskQueue: "random-numbers-example"));
+        new(id: workflowId, taskQueue: "random-numbers-example"));
+
+});
+
+// Command to signal workflow
+AddClientCommand("signal-workflow", "Signal workflow", async (client, workflowIdOption, ctx, cancelToken) =>
+{
+    Console.WriteLine("Signalling workflow");  
+
+    var workflowId = ctx.ParseResult.GetValueForOption(workflowIdOption) ?? "";
+    Console.WriteLine(workflowId);   
+    var handle = client.GetWorkflowHandle(workflowId);
+
+    await handle.SignalAsync<MyWorkflow>(wf => wf.CompleteSignal());
 
 });
 
