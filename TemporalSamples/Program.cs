@@ -1,18 +1,61 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.CommandLine;
+using Microsoft.Extensions.Logging;
 using Temporalio.Client;
 using Temporalio.Worker;
 using TemporalioSamples.ActivitySimple;
 
-// Create a client to localhost on default namespace
-var client = await TemporalClient.ConnectAsync(new("localhost:7233")
-{
-    LoggerFactory = LoggerFactory.Create(builder =>
-        builder.
-            AddSimpleConsole(options => options.TimestampFormat = "[HH:mm:ss] ").
-            SetMinimumLevel(LogLevel.Information)),
-});
+var rootCommand = new RootCommand("Client mTLS sample");
 
-async Task RunWorkerAsync()
+// Helper for client commands
+void AddClientCommand(
+    string name,
+    string desc,
+    Func<ITemporalClient, CancellationToken, Task> func)
+{
+    var cmd = new Command(name, desc);
+    rootCommand!.AddCommand(cmd);
+
+    // Add options
+    var targetHostOption = new Option<string>("--target-host", "Host:port to connect to");
+    targetHostOption.IsRequired = true;
+    var namespaceOption = new Option<string>("--namespace", "Namespace to connect to");
+    namespaceOption.IsRequired = true;
+    var clientCertOption = new Option<FileInfo>("--client-cert", "Client certificate file for auth");
+    clientCertOption.IsRequired = true;
+    var clientKeyOption = new Option<FileInfo>("--client-key", "Client key file for auth");
+    clientKeyOption.IsRequired = true;
+    cmd.AddOption(targetHostOption);
+    cmd.AddOption(namespaceOption);
+    cmd.AddOption(clientCertOption);
+    cmd.AddOption(clientKeyOption);
+
+    // Set handler
+    cmd.SetHandler(async ctx =>
+    {
+        // Create client
+        var client = await TemporalClient.ConnectAsync(
+            new(ctx.ParseResult.GetValueForOption(targetHostOption)!)
+            {
+                Namespace = ctx.ParseResult.GetValueForOption(namespaceOption)!,
+                // Set TLS options with client certs. Note, more options could
+                // be added here for server CA (i.e. "ServerRootCACert") or SNI
+                // override (i.e. "Domain") for self-hosted environments with
+                // self-signed certificates.
+                Tls = new()
+                {
+                    ClientCert =
+                        File.ReadAllBytes(ctx.ParseResult.GetValueForOption(clientCertOption)!.FullName),
+                    ClientPrivateKey =
+                        File.ReadAllBytes(ctx.ParseResult.GetValueForOption(clientKeyOption)!.FullName),
+                },
+            });
+        // Run
+        await func(client, ctx.GetCancellationToken());
+    });
+}
+
+// Command to run worker
+AddClientCommand("run-worker", "Run worker", async (client, cancelToken) =>
 {
     // Cancellation token cancelled on ctrl+c
     using var tokenSource = new CancellationTokenSource();
@@ -41,24 +84,17 @@ async Task RunWorkerAsync()
     {
         Console.WriteLine("Worker cancelled");
     }
-}
+});
 
-async Task ExecuteWorkflowAsync()
+// Command to run workflow
+AddClientCommand("execute-workflow", "Execute workflow", async (client, cancelToken) =>
 {
     Console.WriteLine("Executing workflow");
     await client.ExecuteWorkflowAsync(
         (MyWorkflow wf) => wf.RunAsync(),
         new(id: "activity-simple-workflow-id", taskQueue: "activity-simple-sample"));
-}
 
-switch (args.ElementAtOrDefault(0))
-{
-    case "worker":
-        await RunWorkerAsync();
-        break;
-    case "workflow":
-        await ExecuteWorkflowAsync();
-        break;
-    default:
-        throw new ArgumentException("Must pass 'worker' or 'workflow' as the single argument");
-}
+});
+
+// Run
+await rootCommand.InvokeAsync(args);
