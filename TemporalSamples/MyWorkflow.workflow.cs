@@ -7,7 +7,7 @@ using Temporalio.Workflows;
 public class MyWorkflow
 {
     [WorkflowRun]
-    public async Task<string> RunAsync()
+    public async Task<string> RunAsync(Order order)
     {
         // Run an async instance method activity.
         var result1 = await Workflow.ExecuteActivityAsync(
@@ -32,6 +32,7 @@ public class MyWorkflow
         Workflow.Logger.LogInformation("Finished Workflow!", result2);
 
         // We'll go ahead and return this result
-        return result2;
+        // return result2;
+        return order.OrderId;
     }
 }

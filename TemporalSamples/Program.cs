@@ -91,8 +91,9 @@ AddClientCommand("run-worker", "Run worker", async (client, cancelToken) =>
 AddClientCommand("execute-workflow", "Execute workflow", async (client, cancelToken) =>
 {
     Console.WriteLine("Executing workflow");
+    var order = new Order("DataSamples/order.json");
     await client.ExecuteWorkflowAsync(
-        (MyWorkflow wf) => wf.RunAsync(),
+        (MyWorkflow wf) => wf.RunAsync(order),
         new(id: "activity-simple-workflow-id", taskQueue: "activity-simple-sample"));
 
 });
@@ -103,8 +104,9 @@ var scratchCommand = new Command("scratch", "Prints a test statement");
 scratchCommand.SetHandler(
  () =>
     {
-        Console.WriteLine("test");
+        Console.WriteLine("*** test");
         var order = new Order("DataSamples/order.json");
+        Console.WriteLine(order.OrderId);
     }
 );
 
