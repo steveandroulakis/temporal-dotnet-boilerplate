@@ -1,0 +1,3 @@
+task queue name dupes
+asp net worker runs async
+web worker runs with env vars directly but worker runs with cmd args
