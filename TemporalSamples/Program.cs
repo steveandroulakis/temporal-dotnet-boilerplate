@@ -104,6 +104,7 @@ scratchCommand.SetHandler(
  () =>
     {
         Console.WriteLine("test");
+        var order = new Order("DataSamples/order.json");
     }
 );
 
